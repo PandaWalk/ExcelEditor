@@ -85,28 +85,6 @@ def splitDupes():
     return worklist
 
 
-def getListwithtitles():
-    sh = wb.active
-    headerlist = []
-
-    for n in range(1, sh.max_row + 1):
-        headerlist.append(sh.cell(1, n).value)
-
-    return filterList(headerlist)
-
-
-def filterList(liste):
-    resultList = []
-    sub_string = "Paket"
-
-    for element in liste:
-
-        if str(element).find(sub_string) >= 0:
-            resultList.append(element)
-
-    return resultList
-
-
 def sort():
     sh = wb.active
     maxcol = countrow(sh)
@@ -194,11 +172,17 @@ def sort():
         for col in range(1, sh.max_column + 1):
             sh.cell(sh.max_row, col).value = nach_summen_daten[col - 1]
 
-def appendNames():
-    pass
+def createHeaderlist():
+    sh = wb.active
+    headerlist = []
+    sub_string = "Paket"
+    for n in range(1, sh.max_row + 1):
+        if str(sh.cell(1,n).value).find(sub_string) >= 0:
+            headerlist.append(sh.cell(1, n).value)
+    return headerlist
 
 def main():
-    sort()
+    print(1)
 
     wb.save('/Users/mac_12/Desktop/test.xls')
 
