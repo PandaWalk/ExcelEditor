@@ -26,7 +26,6 @@ def countrow(sh):
 
     return counter
 
-
 # Nrhs80#6
 
 def countDupes(sh):
@@ -175,16 +174,99 @@ def sort():
 def createHeaderlist():
     sh = wb.active
     headerlist = []
-    sub_string = "Paket"
-    for n in range(1, sh.max_row + 1):
-        if str(sh.cell(1,n).value).find(sub_string) >= 0:
-            headerlist.append(sh.cell(1, n).value)
+    # Durchsuche die erste Zeile nach Headers, die "Paket" enthalten
+    for col in range(1, sh.max_column + 1):
+        cell_value = sh.cell(1, col).value
+        if cell_value and "Paket" in str(cell_value):
+            headerlist.append(str(cell_value))
     return headerlist
 
-def main():
-    print(1)
 
+def createNewHeaders(sh):
+    sh = wb.active
+    maxcol = countrow(sh)
+    dupes = countDupes(sh)
+    existing_headers = createHeaderlist()
+    new_headers = []
+    header_mapping = {}
+
+    # Finde die Summenzeile
+    sum_row = 2  # Standardwert, falls keine Summenzeile gefunden wird
+    for row in range(2, sh.max_row + 1):
+        if str(sh.cell(row, 1).value).startswith('Summe'):
+            sum_row = row
+            break
+
+    # Finde die höchste existierende Paketnummer
+    highest_package_number = 0
+    for header in existing_headers:
+        try:
+            number = int(header.split(':')[0].replace('Paket', '').strip())
+            highest_package_number = max(highest_package_number, number)
+        except ValueError:
+            continue
+
+    # Prüfe, welche Spaltenkombinationen tatsächlich mit 1en existieren
+    valid_column_combinations = set()
+    for row in range(2, sum_row - 1):  # Nur bis VOR der Summenzeile
+        current_cols = []
+        for col in range(1, maxcol + 1):
+            if sh.cell(row, col).value == 1:
+                current_cols.append(col)
+        if len(current_cols) > 1:
+            valid_column_combinations.add(tuple(sorted(current_cols)))
+
+    # Zähle wie viele neue Header wir erstellen werden
+    new_header_count = len(valid_column_combinations)
+
+    # Füge alle neuen Spalten auf einmal ein
+    if new_header_count > 0:
+        sh.insert_cols(maxcol + 1, new_header_count)
+
+    # Erstelle neue Header und verarbeite die Zeilen
+    current_new_col = maxcol + 1
+    new_package_number = highest_package_number + 1
+
+    for cols in valid_column_combinations:
+        header_names = []
+        for col in cols:
+            header_value = sh.cell(1, col).value
+            if header_value:
+                header_name = str(header_value).split(':')[-1].strip()
+                header_names.append(header_name)
+
+        combined_names = " + ".join(header_names)
+        new_header = f"Paket{new_package_number}:{combined_names}"
+
+        if new_header not in existing_headers and new_header not in new_headers:
+            new_headers.append(new_header)
+            sh.cell(1, current_new_col).value = new_header
+
+            # Verarbeite die Zeilen: Lösche die alten 1en und setze die neue 1
+            for r in range(2, sum_row - 1):  # Nur bis VOR der Summenzeile
+                if all(sh.cell(r, c).value == 1 for c in cols):
+                    # Lösche die alten 1en
+                    for c in cols:
+                        sh.cell(r, c).value = None
+                    # Setze die neue 1 in der neuen Spalte
+                    sh.cell(r, current_new_col).value = 1
+
+            # Aktualisiere die Summenzeile
+            sum_formula = f"=SUM({sh.cell(2, current_new_col).coordinate}:{sh.cell(sum_row - 2, current_new_col).coordinate})"
+            sh.cell(sum_row - 1, current_new_col).value = sum_formula
+
+            current_new_col += 1
+            new_package_number += 1
+
+    return new_headers
+
+
+def main():
+    new_headers = createNewHeaders(wb.active)
+    sort()
+    print("Neue Header erstellt:", new_headers)
     wb.save('/Users/mac_12/Desktop/test.xls')
+
 
 
 if __name__ == '__main__':
