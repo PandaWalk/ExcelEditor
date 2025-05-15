@@ -12,7 +12,7 @@ def number(sh):
         cell = sh.cell(n, 1)
         cell.value = celval
 
-
+#zählt die Reihen
 def countrow(sh):
     sh = wb.active
     counter = 0
